@@ -81,6 +81,15 @@ if __name__ == "__main__":
 
     opts = get_options()
     model_params['encoder_layer_num'] = opts.encoder_layer_num
+    
+    # # for debug
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+    # opts.tsp = [20,50]
+    # opts.bandit_alg = 'exp3'
+    # opts.task_description = 'test'
+    # opts.train_episodes = 10000
+    # opts.train_batch_size=32
+    # opts.model_save_interval = 1
 
 
     # setting for seen tasks

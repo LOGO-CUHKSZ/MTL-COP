@@ -122,7 +122,7 @@ class Trainer:
             self.bandit = DiscountedThompson(nbArms)
 
         self.bandit.startGame()
-        self.gradient_info = [[[],[],0] for i in range(nbArms)]
+        self.gradient_info = [[[],[],0, False] for i in range(nbArms)]
         self.gradient_norm = [[] for i in range(nbArms)]
         self.loss_each_task = [[] for i in range(nbArms)]
 
@@ -219,7 +219,7 @@ class Trainer:
             #     pass
             try:
                 self.gradient_info_latest_seen = checkpoint['gradient_info_latest_seen']
-                self.gradient_info = [[self.gradient_info_latest_seen[i][0],[],0] for i in range(nbArms)]
+                self.gradient_info = [[self.gradient_info_latest_seen[i][0],[],0, False] for i in range(nbArms)]
             except:
                 self.gradient_info = checkpoint['gradient_info']
 
@@ -307,7 +307,6 @@ class Trainer:
 
             all_done = (epoch == self.trainer_params['epochs'])
             model_save_interval = self.trainer_params['logging']['model_save_interval']
-            img_save_interval = self.trainer_params['logging']['img_save_interval']
 
             if self.rank == 0 and (all_done or (epoch % model_save_interval) == 0):
                 self.logger.info("Saving trained_model")
@@ -446,14 +445,17 @@ class Trainer:
             for name, params in self.model.module.decoders[problem_idx].named_parameters():
                 grad_ts_d.append(params.grad.data.view(-1))
             grad_ts_d = torch.cat(grad_ts_d)
-
-            self.gradient_info[choice][0] = [grad_share, grad_ts_h, grad_ts_d]
+            latest_grad = [grad_share, grad_ts_h, grad_ts_d]
+            # collect when the first occurance
+            if self.gradient_info[choice][-1] == False:
+                self.gradient_info[choice][0] = [grad_share, grad_ts_h, grad_ts_d]
+                self.gradient_info[choice][-1] = True
             if self.gradient_info[choice][2] == 0:
                 self.gradient_info[choice][1] = [grad_share, grad_ts_h, grad_ts_d]
             else:
                 temp_count = self.gradient_info[choice][2]
                 self.gradient_info[choice][1] = [
-                    1 / (temp_count + 1) * self.gradient_info[choice][0][i] + temp_count / (temp_count + 1) *
+                    1 / (temp_count + 1) * latest_grad[i] + temp_count / (temp_count + 1) *
                     self.gradient_info[choice][1][i] for i in range(3)]
             self.gradient_info[choice][2] += 1
 
@@ -472,7 +474,7 @@ class Trainer:
                 self.influ_dec_mats.append(M_dec)
 
                 self.influ_mats_sim.append(M_similarity)
-                self.influ_mats_sim_share.append(M_similarity)
+                self.influ_mats_sim_share.append(M_similarity_share)
                 self.influ_mats_sim_header.append(M_similarity_head)
                 self.influ_mats_sim_dec.append(M_similarity_dec)
                 reward_for_each_task = 1 / (1 + np.exp(-M_similarity.sum(axis=0)))
@@ -489,7 +491,8 @@ class Trainer:
 
                 self.rewards.append(reward_for_each_task)
 
-            self.gradient_info = [[self.gradient_info[i][0], [], 0] for i in range(num_tasks)]
+            self.gradient_info = [[self.gradient_info[i]
+                                   [0], [], 0, False] for i in range(num_tasks)]
 
         self.total_count += 1
 
@@ -539,7 +542,8 @@ class Trainer:
         cum_scales_per_cop = np.cumsum([len(cop_env) for cop_env in self.env_list])
         for i in range(len(self.gradient_info)):
             cop_i = np.where((i < cum_scales_per_cop) == True)[0][0]
-            grad_i = self.gradient_info[i][1] if len(self.gradient_info[i][1])!=0 else self.gradient_info[i][0]
+            # without assumption 1, the grad_i should be the grad on its first occurance
+            grad_i = self.gradient_info[i][0]
             for j in range(len(self.gradient_info)):
                 grad_j = self.gradient_info[j][1]
                 count_j = self.gradient_info[j][2]
