@@ -85,10 +85,11 @@ if __name__ == "__main__":
     # # for debug
     # os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
     # opts.tsp = [20,50]
+    # opts.cvrp = [20,50]
     # opts.bandit_alg = 'exp3'
     # opts.task_description = 'test'
-    # opts.train_episodes = 10000
-    # opts.train_batch_size=32
+    # opts.train_episodes = 1000
+    # opts.train_batch_size=16
     # opts.model_save_interval = 1
 
 

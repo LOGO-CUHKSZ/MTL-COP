@@ -447,9 +447,11 @@ class Trainer:
             grad_ts_d = torch.cat(grad_ts_d)
             latest_grad = [grad_share, grad_ts_h, grad_ts_d]
             # collect when the first occurance
-            if self.gradient_info[choice][-1] == False:
-                self.gradient_info[choice][0] = [grad_share, grad_ts_h, grad_ts_d]
-                self.gradient_info[choice][-1] = True
+            # if self.gradient_info[choice][-1] == False:
+            #     self.gradient_info[choice][0] = [grad_share, grad_ts_h, grad_ts_d]
+            #     self.gradient_info[choice][-1] = True
+            self.gradient_info[choice][0] = [grad_share, grad_ts_h, grad_ts_d]
+
             if self.gradient_info[choice][2] == 0:
                 self.gradient_info[choice][1] = [grad_share, grad_ts_h, grad_ts_d]
             else:
