@@ -120,7 +120,9 @@ class Trainer:
             self.bandit = Thompson(nbArms)
         elif self.bandit_alg == 'DiscountedThompson':
             self.bandit = DiscountedThompson(nbArms)
-
+        elif self.bandit_alg == 'random':
+            self.bandit = Exp3(nbArms) # just for taking place, no use
+        
         self.bandit.startGame()
         self.gradient_info = [[[],[],0, False] for i in range(nbArms)]
         self.gradient_norm = [[] for i in range(nbArms)]
@@ -212,11 +214,6 @@ class Trainer:
             self.gradient_norm = checkpoint['gradient_norm']
             self.loss_each_task = checkpoint['loss_each_task']
 
-
-            # try:
-            #     self.gradient_info_latest_seen = [[[t.cpu() for t in info] for info in infos] for infos in checkpoint['gradient_info_latest_seen']]
-            # except:
-            #     pass
             try:
                 self.gradient_info_latest_seen = checkpoint['gradient_info_latest_seen']
                 self.gradient_info = [[self.gradient_info_latest_seen[i][0],[],0, False] for i in range(nbArms)]
@@ -390,7 +387,9 @@ class Trainer:
         # bandit alg for choice
         # need to sync the choice for different ranks
         if self.rank == 0:
-            if  self.total_count < self.opts.warm_start *\
+            if self.bandit_alg == 'random':
+                choice = np.random.choice(num_tasks)
+            elif  self.total_count < self.opts.warm_start *\
                     (self.trainer_params['train_episodes']//self.trainer_params['train_batch_size']):  # we select each task once at the beginning of training
                 choice = self.total_count % num_tasks
                 self.bandit.pulls[choice] += 1
