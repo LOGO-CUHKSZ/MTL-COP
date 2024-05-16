@@ -89,7 +89,7 @@ if __name__ == "__main__":
     # opts.bandit_alg = 'exp3'
     # opts.task_description = 'test'
     # opts.train_episodes = 1000
-    # opts.train_batch_size=16
+    # opts.train_batch_size=32
     # opts.model_save_interval = 1
 
 

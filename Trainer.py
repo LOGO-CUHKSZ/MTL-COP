@@ -88,13 +88,6 @@ class Trainer:
         self.env_list = Env(**self.env_params).env_list
         self.unseen_env_list = Env(**self.unseen_params).env_list
 
-        # historical best params
-        self.hist_best_model_params_seen = [[[self.total_count,deepcopy(self.model.state_dict())] for env in cop_env] for cop_env in
-                                            self.env_list]
-
-        self.hist_best_model_params_unseen = [[[self.total_count,deepcopy(self.model.state_dict())] for env in cop_env] for cop_env in
-                                              self.unseen_env_list]
-
         self.optimizer = Optimizer(self.model.parameters(), **self.optimizer_params['optimizer'])
         self.scheduler = Scheduler(self.optimizer, **self.optimizer_params['scheduler'])
 
@@ -124,14 +117,11 @@ class Trainer:
             self.bandit = Exp3(nbArms) # just for taking place, no use
         
         self.bandit.startGame()
-        self.gradient_info = [[[],[],0, False] for i in range(nbArms)]
+        self.gradient_info = {i:{} for i in range(nbArms)}
         self.gradient_norm = [[] for i in range(nbArms)]
         self.loss_each_task = [[] for i in range(nbArms)]
 
         self.choices = []
-        self.influ_mats = []
-        self.influ_header_mats = []
-        self.influ_dec_mats = []
         self.influ_mats_sim = []
         self.influ_mats_sim_share = []
         self.influ_mats_sim_header = []
@@ -191,9 +181,7 @@ class Trainer:
 
             self.choices = checkpoint['choices']
             self.choice = self.choices[-1]
-            self.influ_mats = checkpoint['influ_mats']
-            self.influ_header_mats = checkpoint['influ_header_mats']
-            self.influ_dec_mats = checkpoint['influ_dec_mats']
+
 
             self.influ_mats_sim = checkpoint['influ_mats_sim']
             self.influ_mats_sim_share = checkpoint['influ_mats_sim_share']
@@ -207,26 +195,14 @@ class Trainer:
             self.total_count = checkpoint['total_count']
             self.overall_seen_data = checkpoint['overall_seen_data']
             self.overall_unseen_data = checkpoint['overall_unseen_data']
-            # historical best params
-            self.hist_best_model_params_seen = checkpoint['hist_best_model_params_seen']
-            self.hist_best_model_params_unseen = checkpoint['hist_best_model_params_unseen']
 
             self.gradient_norm = checkpoint['gradient_norm']
             self.loss_each_task = checkpoint['loss_each_task']
 
-            try:
-                self.gradient_info_latest_seen = checkpoint['gradient_info_latest_seen']
-                self.gradient_info = [[self.gradient_info_latest_seen[i][0],[],0, False] for i in range(nbArms)]
-            except:
-                self.gradient_info = checkpoint['gradient_info']
-
-            try:
-                self.training_time = checkpoint['training_time']
-                self.training_time_light = checkpoint['training_time_light']
-            except:
-                self.training_time = []
-                self.training_time_light = []
-
+            self.gradient_info = checkpoint['gradient_info']
+            
+            self.training_time = checkpoint['training_time']
+            self.training_time_light = checkpoint['training_time_light']
         try:
             self.num_restart = self.bandit.number_of_restart
         except:
@@ -314,9 +290,6 @@ class Trainer:
                     'scheduler_state_dict': self.scheduler.state_dict(),
                     'result_log': self.result_log.get_raw_data(),
                     'choices': self.choices,
-                    'influ_mats': self.influ_mats,
-                    'influ_header_mats': self.influ_header_mats,
-                    'influ_dec_mats': self.influ_dec_mats,
                     'influ_mats_sim': self.influ_mats_sim,
                     'influ_mats_sim_share': self.influ_mats_sim_share,
                     'influ_mats_sim_header': self.influ_mats_sim_header,
@@ -327,8 +300,6 @@ class Trainer:
                     'eval_res': self.eval_res,
                     'overall_seen_data': self.overall_seen_data,
                     'overall_unseen_data': self.overall_unseen_data,
-                    'hist_best_model_params_seen': self.hist_best_model_params_seen,
-                    'hist_best_model_params_unseen': self.hist_best_model_params_unseen,
                     'gradient_info':self.gradient_info,
                     'gradient_norm': self.gradient_norm,
                     'loss_each_task': self.loss_each_task,
@@ -444,22 +415,19 @@ class Trainer:
             for name, params in self.model.module.decoders[problem_idx].named_parameters():
                 grad_ts_d.append(params.grad.data.view(-1))
             grad_ts_d = torch.cat(grad_ts_d)
-            latest_grad = [grad_share, grad_ts_h, grad_ts_d]
-            # collect when the first occurance
-            # if self.gradient_info[choice][-1] == False:
-            #     self.gradient_info[choice][0] = [grad_share, grad_ts_h, grad_ts_d]
-            #     self.gradient_info[choice][-1] = True
-            self.gradient_info[choice][0] = [grad_share, grad_ts_h, grad_ts_d]
 
-            if self.gradient_info[choice][2] == 0:
-                self.gradient_info[choice][1] = [grad_share, grad_ts_h, grad_ts_d]
-            else:
-                temp_count = self.gradient_info[choice][2]
-                self.gradient_info[choice][1] = [
-                    1 / (temp_count + 1) * latest_grad[i] + temp_count / (temp_count + 1) *
-                    self.gradient_info[choice][1][i] for i in range(3)]
-            self.gradient_info[choice][2] += 1
-
+            for c in range(num_tasks):
+                if c == choice:
+                    if len(self.gradient_info[c])==0:
+                        self.gradient_info[c][0] = [[grad_share, grad_ts_h, grad_ts_d], 1]
+                    else:
+                        self.gradient_info[c][len(self.gradient_info[c])] = [[grad_share, grad_ts_h, grad_ts_d], self.gradient_info[c][len(self.gradient_info[c])-1][1]+1]
+                else:
+                    if len(self.gradient_info[c])==0:
+                        self.gradient_info[c][0] = [[], 0]
+                    else:
+                        self.gradient_info[c][len(self.gradient_info[c])] = [[], self.gradient_info[c][len(self.gradient_info[c])-1][1]]
+                        
             self.gradient_norm[choice].append(
                 [torch.norm(torch.cat([grad_share, grad_ts_h, grad_ts_d])).cpu().data.item()])
 
@@ -469,17 +437,13 @@ class Trainer:
                 and self.total_count != 0:
             # update ts using gradient information
             if self.rank == 0:
-                M, M_header, M_dec, M_similarity, M_similarity_share, M_similarity_head, M_similarity_dec = self.get_influ_mat()
-                self.influ_mats.append(M)
-                self.influ_header_mats.append(M_header)
-                self.influ_dec_mats.append(M_dec)
-
+                M_similarity, M_similarity_share, M_similarity_head, M_similarity_dec = self.get_influ_mat()
                 self.influ_mats_sim.append(M_similarity)
                 self.influ_mats_sim_share.append(M_similarity_share)
                 self.influ_mats_sim_header.append(M_similarity_head)
                 self.influ_mats_sim_dec.append(M_similarity_dec)
                 reward_for_each_task = 1 / (1 + np.exp(-M_similarity.sum(axis=0)))
-                grad_info_num = np.array([_[2] for _ in self.gradient_info])
+                grad_info_num = np.array([list(val.items())[-1][1][1] for _, val in self.gradient_info.items()])
                 reward_for_each_task[grad_info_num == 0] = 0
 
                 for task_idx in range(num_tasks):
@@ -491,10 +455,7 @@ class Trainer:
                         self.bandit.rewards[task_idx] += reward_for_each_task[task_idx]
 
                 self.rewards.append(reward_for_each_task)
-
-            self.gradient_info = [[self.gradient_info[i]
-                                   [0], [], 0, False] for i in range(num_tasks)]
-
+                self.gradient_info = {i:{0: [list(self.gradient_info[i].items())[-1][1][0], 0]} for i in range(num_tasks)}
         self.total_count += 1
 
         return loss_mean.data.item(), score_mean
@@ -531,55 +492,65 @@ class Trainer:
         return loss_mean, score_mean.item()
 
     def get_influ_mat(self):
-        M = torch.zeros((len(self.gradient_info),len(self.gradient_info))).cuda()
-        M_header = torch.zeros((len(self.gradient_info),len(self.gradient_info))).cuda()
-        M_dec = torch.zeros((len(self.gradient_info),len(self.gradient_info))).cuda()
-
         M_similarity = torch.zeros((len(self.gradient_info),len(self.gradient_info))).cuda()
         M_similarity_share = torch.zeros((len(self.gradient_info),len(self.gradient_info))).cuda()
         M_similarity_head = torch.zeros((len(self.gradient_info),len(self.gradient_info))).cuda()
         M_similarity_dec = torch.zeros((len(self.gradient_info),len(self.gradient_info))).cuda()
 
         cum_scales_per_cop = np.cumsum([len(cop_env) for cop_env in self.env_list])
+        intervals = len(self.gradient_info[0])
         for i in range(len(self.gradient_info)):
             cop_i = np.where((i < cum_scales_per_cop) == True)[0][0]
             # without assumption 1, the grad_i should be the grad on its first occurance
-            grad_i = self.gradient_info[i][0]
+            grad_i = self.gradient_info[i]
             for j in range(len(self.gradient_info)):
-                grad_j = self.gradient_info[j][1]
-                count_j = self.gradient_info[j][2]
-                if len(grad_j)!=0 and count_j!=0:
+                grad_j = self.gradient_info[j]
+                count_j = grad_j[intervals-1][1]
+                if count_j!=0:
                     cop_j = np.where((j < cum_scales_per_cop) == True)[0][0]
                     if cop_i == cop_j: # i,j are same kind of COP
-                        grad_i_cat = torch.cat(grad_i)
-                        grad_j_cat = torch.cat(grad_j)*count_j
+                        temp_all_sim = 0
+                        temp_header_sim = 0
+                        temp_dec_sim = 0
+                        tem_share_sim = 0
+                        
+                        for t in range(intervals):
+                            if len(grad_i[t][0]) != 0:
+                                lastest_grad_i_t = torch.cat(grad_i[t][0])
+                                lastest_share_grad_i_t = grad_i[t][0][0]
+                                lastest_head_grad_i_t = grad_i[t][0][1]
+                                lastest_dec_grad_i_t = grad_i[t][0][2]
+                                
+                            if len(grad_j[t][0]) != 0:
+                                lastest_grad_j_t = torch.cat(grad_j[t][0])
+                                lastest_share_grad_j_t = grad_j[t][0][0]
+                                lastest_head_grad_j_t = grad_j[t][0][1]
+                                lastest_dec_grad_j_t = grad_j[t][0][2]
+                                
+                            if len(grad_j[t][0]) != 0:
+                                temp_all_sim += (lastest_grad_i_t*lastest_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_grad_i_t)*torch.linalg.vector_norm(lastest_grad_j_t))                  
+                                temp_header_sim += (lastest_head_grad_i_t*lastest_head_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_head_grad_i_t)*torch.linalg.vector_norm(lastest_head_grad_j_t))
+                                temp_dec_sim += (lastest_dec_grad_i_t*lastest_dec_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_dec_grad_i_t)*torch.linalg.vector_norm(lastest_dec_grad_j_t))
+                                tem_share_sim += (lastest_share_grad_i_t*lastest_share_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_share_grad_i_t)*torch.linalg.vector_norm(lastest_share_grad_j_t))
 
-                        inner_prod = grad_i_cat*grad_j_cat
-
-                        M[i,j] = inner_prod.sum()
-                        M_header[i,j] = inner_prod[len(grad_i[0]):len(grad_i[0])+len(grad_i[1])].sum()
-                        M_dec[i,j] = inner_prod[len(grad_i[0])+len(grad_i[1]):].sum()
-
-                        M_similarity[i, j] = M[i, j] / (
-                                    torch.linalg.vector_norm(grad_i_cat) * torch.linalg.vector_norm(grad_j_cat))
-                        M_similarity_share[i, j] = inner_prod[:len(grad_i[0])].sum() / (
-                                    torch.linalg.vector_norm(grad_i_cat[:len(grad_i[0])])
-                                    * torch.linalg.vector_norm(grad_j_cat[:len(grad_j[0])]))
-                        M_similarity_head[i, j] = M_header[i, j] / (torch.linalg.vector_norm(grad_i_cat[len(grad_i[0]):len(grad_i[0]) + len(
-                                                                         grad_i[1])])
-                                                                    * torch.linalg.vector_norm(grad_j_cat[len(grad_j[0]):len(grad_j[0]) + len(
-                                                                         grad_j[1])]))
-                        M_similarity_dec[i,j] = M_dec[i,j]/((torch.linalg.vector_norm(grad_i_cat[len(grad_i[0]) + len(
-                                                                         grad_i[1]):])
-                                                                    * torch.linalg.vector_norm(grad_j_cat[len(grad_j[0]) + len(
-                                                                         grad_j[1]):])))
+                        M_similarity[i, j] = temp_all_sim/count_j
+                        M_similarity_share[i, j] = tem_share_sim/count_j
+                        M_similarity_head[i, j] = temp_header_sim/count_j
+                        M_similarity_dec[i,j] = temp_dec_sim/count_j
+                        
                     else: #i,j are different kinds of COP
-                        grad_i_share = grad_i[0]
-                        grad_j_share_cat = grad_j[0]*count_j
-                        M[i,j] = (grad_i_share* grad_j_share_cat).sum(-1)
-                        M_similarity_share[i,j] = M[i,j]/(torch.linalg.vector_norm(grad_i_share) * torch.linalg.vector_norm(grad_j_share_cat))
-                        M_similarity[i,j] = M_similarity_share[i,j]
-        return M.cpu().numpy(), M_header.cpu().numpy(), M_dec.cpu().numpy(), M_similarity.cpu().numpy(), M_similarity_share.cpu().numpy(), M_similarity_head.cpu().numpy(), M_similarity_dec.cpu().numpy()
+                        temp_all_sim = 0
+                        for t in range(intervals):
+                            if len(grad_i[t][0]) != 0:
+                                lastest_share_grad_i_t = grad_i[t][0][0]
+                            if len(grad_j[t][0]) != 0:
+                                lastest_share_grad_j_t = grad_j[t][0][0]
+                            if len(grad_j[t][0]) != 0:
+                                tem_share_sim += (lastest_share_grad_i_t*lastest_share_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_share_grad_i_t)*torch.linalg.vector_norm(lastest_share_grad_j_t))
+
+                        M_similarity_share[i,j] = tem_share_sim/count_j
+                        M_similarity[i,j] = tem_share_sim/count_j
+        return M_similarity.cpu().numpy(), M_similarity_share.cpu().numpy(), M_similarity_head.cpu().numpy(), M_similarity_dec.cpu().numpy()
 
     def valiadate(self,batch_size):
         self.model.eval()
@@ -666,39 +637,6 @@ class Trainer:
         dist.all_reduce(total_res_mean, op=dist.ReduceOp.SUM)
         total_res_mean /= dist.get_world_size()
         total_res_mean = total_res_mean.cpu().numpy()
-
-        # update the historical best param on seen tasks
-        if eval_res_hist is not None:
-            temp_count = 0
-            for i, cop_env in enumerate(self.env_list):
-                problem = self.problem[i]
-                for j, env in enumerate(cop_env):
-                    if problem == 'KP' or problem == 'OP':
-                        if total_res_mean[temp_count] > np.max(eval_res_hist[:, temp_count]):
-                            self.hist_best_model_params_seen[i][j][0] = self.total_count
-                            self.hist_best_model_params_seen[i][j][1] = deepcopy(self.model.module.state_dict())
-                    else:
-                        if total_res_mean[temp_count] < np.min(eval_res_hist[:, temp_count]):
-                            self.hist_best_model_params_seen[i][j][0] = self.total_count
-                            self.hist_best_model_params_seen[i][j][1] = deepcopy(self.model.module.state_dict())
-
-                    temp_count += 1
-
-            # update the historical best param on unseen tasks
-            for i, cop_env in enumerate(self.unseen_env_list):
-                problem = self.unseen_problem[i]
-                for j, env in enumerate(cop_env):
-                    if problem == 'KP' or problem == 'OP':
-                        if total_res_mean[temp_count] > np.max(eval_res_hist[:, temp_count]):
-                            self.hist_best_model_params_unseen[i][j][0] = self.total_count
-                            self.hist_best_model_params_unseen[i][j][1] = deepcopy(self.model.module.state_dict())
-                    else:
-                        if total_res_mean[temp_count] < np.min(eval_res_hist[:, temp_count]):
-                            self.hist_best_model_params_unseen[i][j][0] = self.total_count
-                            self.hist_best_model_params_unseen[i][j][1] = deepcopy(self.model.module.state_dict())
-
-                    temp_count += 1
-
         self.eval_res.append(total_res_mean.reshape(1, -1))
 
 
