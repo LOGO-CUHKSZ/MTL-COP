@@ -38,7 +38,6 @@ import json
 import shutil
 import torch
 import networkx as nx
-from sklearn.linear_model import LinearRegression
 
 process_start_time = datetime.now(pytz.timezone("Asia/Seoul"))
 result_folder = './result/' + process_start_time.strftime("%Y%m%d_%H%M%S") + '{desc}'

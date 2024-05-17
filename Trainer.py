@@ -432,7 +432,7 @@ class Trainer:
                 [torch.norm(torch.cat([grad_share, grad_ts_h, grad_ts_d])).cpu().data.item()])
 
         if self.total_count >= self.opts.warm_start * \
-                (self.trainer_params['train_episodes'] // self.trainer_params['train_batch_size']) - 1 \
+                int(self.trainer_params['train_episodes'] / self.trainer_params['train_batch_size']) \
                 and self.total_count % self.select_freq == 0 \
                 and self.total_count != 0:
             # update ts using gradient information
@@ -512,7 +512,7 @@ class Trainer:
                         temp_all_sim = 0
                         temp_header_sim = 0
                         temp_dec_sim = 0
-                        tem_share_sim = 0
+                        temp_share_sim = 0
                         
                         for t in range(intervals):
                             if len(grad_i[t][0]) != 0:
@@ -527,29 +527,29 @@ class Trainer:
                                 lastest_head_grad_j_t = grad_j[t][0][1]
                                 lastest_dec_grad_j_t = grad_j[t][0][2]
                                 
-                            if len(grad_j[t][0]) != 0:
+                            if len(grad_i[t][0]) != 0 and len(grad_j[t][0]) != 0:
                                 temp_all_sim += (lastest_grad_i_t*lastest_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_grad_i_t)*torch.linalg.vector_norm(lastest_grad_j_t))                  
                                 temp_header_sim += (lastest_head_grad_i_t*lastest_head_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_head_grad_i_t)*torch.linalg.vector_norm(lastest_head_grad_j_t))
                                 temp_dec_sim += (lastest_dec_grad_i_t*lastest_dec_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_dec_grad_i_t)*torch.linalg.vector_norm(lastest_dec_grad_j_t))
-                                tem_share_sim += (lastest_share_grad_i_t*lastest_share_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_share_grad_i_t)*torch.linalg.vector_norm(lastest_share_grad_j_t))
+                                temp_share_sim += (lastest_share_grad_i_t*lastest_share_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_share_grad_i_t)*torch.linalg.vector_norm(lastest_share_grad_j_t))
 
                         M_similarity[i, j] = temp_all_sim/count_j
-                        M_similarity_share[i, j] = tem_share_sim/count_j
+                        M_similarity_share[i, j] = temp_share_sim/count_j
                         M_similarity_head[i, j] = temp_header_sim/count_j
                         M_similarity_dec[i,j] = temp_dec_sim/count_j
                         
                     else: #i,j are different kinds of COP
-                        temp_all_sim = 0
+                        temp_share_sim = 0
                         for t in range(intervals):
                             if len(grad_i[t][0]) != 0:
                                 lastest_share_grad_i_t = grad_i[t][0][0]
                             if len(grad_j[t][0]) != 0:
                                 lastest_share_grad_j_t = grad_j[t][0][0]
-                            if len(grad_j[t][0]) != 0:
-                                tem_share_sim += (lastest_share_grad_i_t*lastest_share_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_share_grad_i_t)*torch.linalg.vector_norm(lastest_share_grad_j_t))
+                            if len(grad_i[t][0]) != 0 and len(grad_j[t][0]) != 0:
+                                temp_share_sim += (lastest_share_grad_i_t*lastest_share_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_share_grad_i_t)*torch.linalg.vector_norm(lastest_share_grad_j_t))
 
-                        M_similarity_share[i,j] = tem_share_sim/count_j
-                        M_similarity[i,j] = tem_share_sim/count_j
+                        M_similarity_share[i,j] = temp_share_sim/count_j
+                        M_similarity[i,j] = temp_share_sim/count_j
         return M_similarity.cpu().numpy(), M_similarity_share.cpu().numpy(), M_similarity_head.cpu().numpy(), M_similarity_dec.cpu().numpy()
 
     def valiadate(self,batch_size):

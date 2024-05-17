@@ -9,9 +9,14 @@ Wang C, Yu T. Efficient training of multi-task neural solver with multi-armed ba
 ### Basic environment settings
 Our codes run perfectly on Ubuntu18.04 and CUDA version 11.7. The basic environment settings are as follows:
 ``` Bash
-Python=3.9
+Python=3.10
 PyTorch=2.0.1
 ```
+Then you need to setup `SMPyBandits` to support the bandit algorithm: Go to `./MTL-COP`, then 
+```Bash
+git clone https://github.com/SMPyBandits/SMPyBandits.git
+```
+
 
 # How To Run
 
