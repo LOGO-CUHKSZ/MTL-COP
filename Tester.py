@@ -91,34 +91,6 @@ class COPTester:
         checkpoint_fullname = '{path}/checkpoint-{epoch}.pt'.format(**model_load)
         checkpoint = torch.load(checkpoint_fullname, map_location=device)
 
-        try:
-            seen_params = checkpoint['hist_best_model_params_seen'][1]
-            unseen_params = checkpoint['hist_best_model_params_unseen'][1]
-            self.best_param = [seen_params[i] + unseen_params[i] for i in range(len(seen_params))]
-        except:
-            try:
-                seen_params = checkpoint['hist_best_model_params_seen']
-                unseen_params = checkpoint['hist_best_model_params_unseen']
-                self.best_param = [seen_params[i][1] + unseen_params[i][1] for i in range(len(seen_params))]
-            except:
-                try:
-                    seen_params, unseen_params = [], []
-                    for cop_param in checkpoint['hist_best_model_params_seen']:
-                        seen_params.append([])
-                        for param in cop_param:
-                            seen_params[-1].append(param[1])
-                    for cop_param in checkpoint['hist_best_model_params_unseen']:
-                        unseen_params.append([])
-                        for param in cop_param:
-                            unseen_params[-1].append(param[1])
-                    self.best_param = [seen_params[i] + unseen_params[i] for i in range(len(seen_params))]
-                except:
-                    try:
-                        seen_params = checkpoint['hist_best_model_params_seen']
-                        self.best_param = [[param[1] for param in seen_params[i]] for i in range(len(seen_params))]
-                    except:
-                        pass
-
         self.model.load_state_dict(checkpoint['model_state_dict'])
 
         # utility
@@ -126,14 +98,9 @@ class COPTester:
         self.model_epoch = model_load['epoch']
 
     def run(self, best_mode=False):
-        if best_mode:
-            if os.path.exists('{}/result_gap_epoch{}-best.pkl'.format(self.result_folder, self.model_epoch)):
-                print('{}/result_gap_epoch{}-best.pkl already exists'.format(self.result_folder, self.model_epoch))
-                return
-        else:
-            if os.path.exists('{}/result_gap_epoch{}.pkl'.format(self.result_folder, self.model_epoch)):
-                print('{}/result_gap_epoch{}.pkl already exists'.format(self.result_folder, self.model_epoch))
-                return
+        if os.path.exists('{}/result_gap_epoch{}.pkl'.format(self.result_folder, self.model_epoch)):
+            print('{}/result_gap_epoch{}.pkl already exists'.format(self.result_folder, self.model_epoch))
+            return
 
         self.time_estimator.reset()
 
@@ -186,12 +153,9 @@ class COPTester:
                 self.logger.info(" AUGMENTATION SCORE: {} ".format(aug_score_AM.avg))
                 result = {'no_aug_gap':score_AM.avg,
                           'aug_gap':aug_score_AM.avg}
-                if best_mode:
-                    with open('{}/result_gap_epoch{}-best.pkl'.format(self.result_folder,self.model_epoch), 'wb') as file:
-                        pickle.dump(result, file)
-                else:
-                    with open('{}/result_gap_epoch{}.pkl'.format(self.result_folder,self.model_epoch), 'wb') as file:
-                        pickle.dump(result, file)
+
+                with open('{}/result_gap_epoch{}.pkl'.format(self.result_folder,self.model_epoch), 'wb') as file:
+                    pickle.dump(result, file)
 
 
 
@@ -250,8 +214,6 @@ class COPTester:
                 for i in range(len(cop_env)):
                     env = cop_env[i]
                     state, reward, done = states[k][i], rewards[k][i], dones[k][i]
-                    if best_mode:
-                        self.model.load_state_dict(self.best_param[k][i])
                     self.model.pre_forward_oneCOP(reset_state[k][i], problem)
                     while not done:
                         selected, _ = self.model(state, problem)

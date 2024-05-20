@@ -70,9 +70,7 @@ def main(opts):
 
     copy_all_src(tester.result_folder)
 
-    # tester.run()
-    tester.run(best_mode=True)
-
+    tester.run()
 
 
 def _print_config():
@@ -81,7 +79,7 @@ def _print_config():
 
 
 def get_seen_task(path):
-    tasks = path.split('/')[-1].split('BanditAlg')[0].split('_')[2].split('-')
+    tasks = path.split('/')[-1].split('_train_')[1].split('_BanditAlg')[0].split('-')
     cop = {}
     for task in tasks:
         try:

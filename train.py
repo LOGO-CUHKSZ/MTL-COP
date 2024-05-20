@@ -83,9 +83,9 @@ if __name__ == "__main__":
     model_params['encoder_layer_num'] = opts.encoder_layer_num
     
     # # for debug
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
-    # opts.tsp = [20,50]
-    # opts.cvrp = [20,50]
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
+    # opts.tsp = [20,50,100]
+    # opts.cvrp = [20,50,100]
     # opts.bandit_alg = 'exp3'
     # opts.task_description = 'test'
     # opts.train_episodes = 1000

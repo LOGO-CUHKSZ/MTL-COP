@@ -455,7 +455,13 @@ class Trainer:
                         self.bandit.rewards[task_idx] += reward_for_each_task[task_idx]
 
                 self.rewards.append(reward_for_each_task)
-                self.gradient_info = {i:{0: [list(self.gradient_info[i].items())[-1][1][0], 0]} for i in range(num_tasks)}
+                temp_gradient_info = {i:{} for i in range(num_tasks)}
+                for i in range(num_tasks):
+                    for key, val in self.gradient_info[i].items():
+                        if len(val[0])!=0:
+                            temp_gradient_info[i][0] = [val[0], 1]
+                
+                self.gradient_info = temp_gradient_info
         self.total_count += 1
 
         return loss_mean.data.item(), score_mean
@@ -520,14 +526,28 @@ class Trainer:
                                 lastest_share_grad_i_t = grad_i[t][0][0]
                                 lastest_head_grad_i_t = grad_i[t][0][1]
                                 lastest_dec_grad_i_t = grad_i[t][0][2]
+                                no_grad_i=False
+                            else:
+                                lastest_grad_i_t = torch.zeros(1).cuda()
+                                lastest_share_grad_i_t =torch.zeros(1).cuda()
+                                lastest_head_grad_i_t = torch.zeros(1).cuda()
+                                lastest_dec_grad_i_t = torch.zeros(1).cuda()
+                                no_grad_i = True
+                                for temp in range(t,-1,-1):
+                                    if len(grad_i[temp][0]) != 0:
+                                        no_grad_i = False
+                                        lastest_grad_i_t = torch.cat(grad_i[temp][0])
+                                        lastest_share_grad_i_t = grad_i[temp][0][0]
+                                        lastest_head_grad_i_t = grad_i[temp][0][1]
+                                        lastest_dec_grad_i_t = grad_i[temp][0][2]
+                                        break
                                 
-                            if len(grad_j[t][0]) != 0:
+                            if len(grad_j[t][0]) != 0 and (not no_grad_i):
                                 lastest_grad_j_t = torch.cat(grad_j[t][0])
                                 lastest_share_grad_j_t = grad_j[t][0][0]
                                 lastest_head_grad_j_t = grad_j[t][0][1]
                                 lastest_dec_grad_j_t = grad_j[t][0][2]
                                 
-                            if len(grad_i[t][0]) != 0 and len(grad_j[t][0]) != 0:
                                 temp_all_sim += (lastest_grad_i_t*lastest_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_grad_i_t)*torch.linalg.vector_norm(lastest_grad_j_t))                  
                                 temp_header_sim += (lastest_head_grad_i_t*lastest_head_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_head_grad_i_t)*torch.linalg.vector_norm(lastest_head_grad_j_t))
                                 temp_dec_sim += (lastest_dec_grad_i_t*lastest_dec_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_dec_grad_i_t)*torch.linalg.vector_norm(lastest_dec_grad_j_t))
@@ -543,9 +563,18 @@ class Trainer:
                         for t in range(intervals):
                             if len(grad_i[t][0]) != 0:
                                 lastest_share_grad_i_t = grad_i[t][0][0]
-                            if len(grad_j[t][0]) != 0:
+                                no_grad_i=False
+                            else:
+                                lastest_share_grad_i_t = torch.zeros(1).cuda()
+                                no_grad_i = True
+                                for temp in range(t,-1,-1):
+                                    if len(grad_i[temp][0]) != 0:
+                                        lastest_share_grad_i_t =  grad_i[temp][0][0]
+                                        no_grad_i=False
+                                        break
+                                    
+                            if len(grad_j[t][0]) != 0 and (not no_grad_i):
                                 lastest_share_grad_j_t = grad_j[t][0][0]
-                            if len(grad_i[t][0]) != 0 and len(grad_j[t][0]) != 0:
                                 temp_share_sim += (lastest_share_grad_i_t*lastest_share_grad_j_t).sum()/(torch.linalg.vector_norm(lastest_share_grad_i_t)*torch.linalg.vector_norm(lastest_share_grad_j_t))
 
                         M_similarity_share[i,j] = temp_share_sim/count_j
