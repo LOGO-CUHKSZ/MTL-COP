@@ -606,37 +606,3 @@ def plot_graph(G):
     pos = nx.circular_layout(G)
     nx.draw_spring(G,with_labels=True)
     plt.show()
-
-
-if __name__=="__main__":
-    file_dirs = [
-        '/home/wangchenguang/code/UniversalSolver/POMOSolver/result/_train_TSP[20, 50]-CVRP[20, 50]-OP[20, 50]-KP[50, 100]_BanditAlg-exp3rpp_unseen-TSP[100]-CVRP[100]-OP[100]-KP[200]_desc-exp3rpp-step_100/checkpoint-500.pt',
-        '/home/wangchenguang/code/UniversalSolver/POMOSolver/result/_train_TSP[20, 50]-CVRP[20, 50]-OP[20, 50]-KP[50, 100]_BanditAlg-exp3rpp_unseen-TSP[100]-CVRP[100]-OP[100]-KP[200]_desc-exp3rpp-step_1epoch/checkpoint-500.pt',
-        '/home/wangchenguang/code/UniversalSolver/POMOSolver/result/_train_TSP[20, 50]-CVRP[20, 50]-OP[20, 50]-KP[50, 100]_BanditAlg-exp3rpp_unseen-TSP[100]-CVRP[100]-OP[100]-KP[200]_desc-select-policy_exp3rpp-trend/checkpoint-500.pt',
-        '/home/wangchenguang/code/UniversalSolver/POMOSolver/result/_train_TSP[20, 50, 100]-CVRP[20, 50, 100]-OP[20, 50, 100]-KP[50, 100, 200]_BanditAlg-cusumucb_unseen-TSP[200, 500]-CVRP[200, 500]-OP[200, 500]-KP[500, 1000]_desc-cusumucb_strategy/checkpoint-latest.pt',
-        '/home/wangchenguang/code/UniversalSolver/POMOSolver/result/_train_TSP[20, 50]-CVRP[20, 50]-OP[20]-KP[50]_BanditAlg-cumucb_unseen-TSP[21]-CVRP[21]-OP[21]-KP[51]_desc-test-valid-nogap-debug/checkpoint-latest.pt',
-        '/home/wangchenguang/code/UniversalSolver/POMOSolver/result/_train_TSP[20, 50]-CVRP[20, 50]_BanditAlg-cumucb_unseen-TSP[100, 200]-CVRP[100, 200]_desc-4gpu-cumucb/checkpoint-latest.pt',
-    '/home/wangchenguang/code/UniversalSolver/POMOSolver/result/_train_TSP[20, 50]-CVRP[20, 50]_BanditAlg-cumucb_unseen-TSP[100, 200]-CVRP[100, 200]_desc-test-4gpu-gap/checkpoint-latest.pt',
-        '/home/wangchenguang/code/UniversalSolver/POMOSolver/result/_train_TSP[20, 50]-CVRP[20, 50]_BanditAlg-phtucb_unseen-TSP[100, 200]-CVRP[100, 200]_desc-test-4gpu-gap/checkpoint-latest.pt'
-    ]
-
-
-
-    # for dir in file_dirs:
-    #     res_dic, loss = read_score_loss(dir)
-    #     plot_fig(res_dic,log_flag=False)
-    # res_dic, loss = read_score_loss(file_dirs[0])
-    # plot_fig(res_dic, log_flag=False)
-    # G = read_improvement_graph(file_dirs[0])
-    # plot_graph(G)
-
-    # plt_rew(file_dirs[0])
-    # pass
-
-    res_dic, loss, trend, choices, rewards, problem_list = read_score_loss(file_dirs[1])
-
-    # plot_score(res_dic, log_flag=False)
-    # plot_retuen(choices,rewards,problem_list)
-    # plot_trend(choices,trend,problem_list)
-    # read_improvement_graph(file_dirs[0])
-    anayl_weights_mat(file_dirs[1],choices, trend, problem_list)

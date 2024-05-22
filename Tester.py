@@ -150,7 +150,9 @@ class COPTester:
             if all_done:
                 self.logger.info(" *** Test Done *** ")
                 self.logger.info(" NO-AUG SCORE: {} ".format(score_AM.avg))
+                self.logger.info(" Mean NO-AUG SCORE: {} ".format(np.mean(score_AM.avg)))
                 self.logger.info(" AUGMENTATION SCORE: {} ".format(aug_score_AM.avg))
+                self.logger.info(" Mean AUGMENTATION SCORE: {} ".format(np.mean(aug_score_AM.avg)))
                 result = {'no_aug_gap':score_AM.avg,
                           'aug_gap':aug_score_AM.avg}
 
