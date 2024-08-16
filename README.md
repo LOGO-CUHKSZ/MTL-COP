@@ -34,3 +34,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python train.py --epochs 1000 --warm_start 
 ```python
 CUDA_VISIBLE_DEVICES=0 python test.py --model_path "your/model/path" --model_epoch 1000
 ```
+Test on TSPLib or CVRPLib:
+```python
+CUDA_VISIBLE_DEVICES=0 python test_real.py --tsp --model_path "your/model/path" --model_epoch 1000
+CUDA_VISIBLE_DEVICES=0 python test_real.py --cvrp --model_path "your/model/path" --model_epoch 1000
+```
