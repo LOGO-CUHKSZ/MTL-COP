@@ -32,5 +32,5 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python train.py --epochs 1000 --warm_start 
 
 ## Evaluation
 ```python
-CUDA_VISIBLE_DEVICES=0 python test.py --model_path "./result/_train_TSP[20, 50, 100]-CVRP[20, 50, 100]-OP[20, 50, 100]-KP[50, 100, 200]_BanditAlg-exp3_unseen-_desc-train12task_exp3_freq12" --model_epoch 1000
+CUDA_VISIBLE_DEVICES=0 python test.py --model_path "your/model/path" --model_epoch 1000
 ```
