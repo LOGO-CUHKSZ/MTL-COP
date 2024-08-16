@@ -58,7 +58,7 @@ class TSPEnv:
             self.batch_size = prepare_dataset.shape[0]
             self.problem_size = prepare_dataset.shape[1]
             self.problems = prepare_dataset
-            self.pomo_size = prepare_dataset.shape[1]
+            self.pomo_size = min([prepare_dataset.shape[1],100])
         # problems.shape: (batch, problem, 2)
         if aug_factor > 1:
             if aug_factor == 8:

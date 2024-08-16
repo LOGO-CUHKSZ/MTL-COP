@@ -107,7 +107,8 @@ class CVRPEnv:
         else:
             self.batch_size = prepare_dataset.shape[0]
             self.problem_size = prepare_dataset.shape[1]-1
-            self.pomo_size = prepare_dataset.shape[1] - 1
+            # self.pomo_size = prepare_dataset.shape[1] - 1
+            self.pomo_size = min([prepare_dataset.shape[1] - 1,100])
             depot_xy = prepare_dataset[:,0,:2][:,None,:]
             node_xy = prepare_dataset[:,1:,:2]
             node_demand = prepare_dataset[:, 1:, -1]

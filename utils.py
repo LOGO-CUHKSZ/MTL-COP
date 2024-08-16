@@ -39,7 +39,10 @@ import shutil
 import torch
 import networkx as nx
 
-process_start_time = datetime.now(pytz.timezone("Asia/Seoul"))
+import tsplib95
+import pandas as pd
+
+process_start_time = datetime.now(pytz.timezone("Asia/Shanghai"))
 result_folder = './result/' + process_start_time.strftime("%Y%m%d_%H%M%S") + '{desc}'
 
 
@@ -606,3 +609,51 @@ def plot_graph(G):
     pos = nx.circular_layout(G)
     nx.draw_spring(G,with_labels=True)
     plt.show()
+
+
+def read_vrp(filename):
+    probelm = tsplib95.load(filename).as_name_dict()
+    dimension = probelm['dimension']
+    coords = np.array([probelm['node_coords'][i + 1] for i in range(probelm['dimension'])])
+    capacity = probelm['capacity']
+    # every element in demand is devided by capacity
+    demand = np.array([probelm['demands'][i + 1] / capacity for i in range(probelm['dimension'])])
+    # demand = np.array([probelm['demands'][i + 1] for i in range(probelm['dimension'])]).tolist()
+
+    xc = coords[:, 0]
+    yc = coords[:, 1]
+    depot = coords[0]
+
+    gt = 0.0
+    sol_file = filename[:-4] + '.sol'
+    if os.path.exists(sol_file):
+        with open(sol_file, 'r') as f:
+            while True:
+                line = f.readline()
+                if line == '':
+                    break
+                if "Cost" in line:
+                    gt = float(line.split()[-1])
+                    break
+
+    # gt = calc_vrp_cost(depot, loc, tour)
+    cities = pd.DataFrame(
+        np.array(coords),
+        columns=['y', 'x'],
+    )[['x', 'y']]
+    norm_factor = max(cities.x.max() - cities.x.min(), cities.y.max() - cities.y.min())
+    norm_cities = cities.apply(lambda c: (c - c.min()) / norm_factor)[['x', 'y']].values
+    #combine norm_cities and demand
+    norm_cities = np.concatenate([norm_cities, np.array([demand]).T], axis=1)
+
+    return torch.from_numpy(norm_cities).to(torch.float32).unsqueeze(0), norm_factor, gt
+
+
+def load_cvrp(dir):
+    real_ds_list = []
+    # dir = './cvrplib/read_E'
+    for file in os.listdir(dir):
+        if file.split('.')[-1] == 'vrp':
+            real_ds_list.append(os.path.join(dir, file))
+    dataset, norm_factor, gt = zip(*[read_vrp(file) for file in real_ds_list])
+    return real_ds_list, dataset, norm_factor, gt
