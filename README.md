@@ -20,6 +20,10 @@ git clone https://github.com/SMPyBandits/SMPyBandits.git
 
 # How To Run
 
+## Dataset
+You can download the dataset from [here](https://drive.google.com/file/d/151UOyIU7hLamwoEnXquNjc6heNm3-WuS/view?usp=sharing).
+
+
 ## Training
 ```python
 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python train.py --epochs 1000 --warm_start 1 --select_freq 12 --tsp 20 50 100  --cvrp 20 50 100  --op 20 50 100  --kp 50 100 200 --bandit_alg exp3 --task_description train12task_exp3_freq12
