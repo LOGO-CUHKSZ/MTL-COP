@@ -96,6 +96,12 @@ class Trainer:
         # bandit setting
         nbArms = sum([len(cop_env) for cop_env in self.env_list])
 
+        # simplified settings for STL
+        if nbArms == 1:
+            self.stl=True
+        else:
+            self.stl=False
+
         self.select_freq = nbArms if opts.select_freq is None else opts.select_freq
 
         if self.trainer_params['train_episodes'] % self.trainer_params['train_batch_size'] == 0:
@@ -400,69 +406,70 @@ class Trainer:
         self.loss_each_task[choice].append(loss_mean.data.item())
         self.training_time_light.append(time.time()-s)
 
-        if self.rank == 0:
-            # recored the gradient information
-            grad_share = []
-            for name, params in self.model.module.encoder.named_parameters():
-                grad_share.append(params.grad.data.view(-1))
-            grad_share = torch.cat(grad_share)
-
-            grad_ts_h = []
-            for name, params in self.model.module.headers[problem_idx].named_parameters():
-                grad_ts_h.append(params.grad.data.view(-1))
-            grad_ts_h = torch.cat(grad_ts_h)
-            grad_ts_d = []
-            for name, params in self.model.module.decoders[problem_idx].named_parameters():
-                grad_ts_d.append(params.grad.data.view(-1))
-            grad_ts_d = torch.cat(grad_ts_d)
-
-            for c in range(num_tasks):
-                if c == choice:
-                    if len(self.gradient_info[c])==0:
-                        self.gradient_info[c][0] = [[grad_share, grad_ts_h, grad_ts_d], 1]
-                    else:
-                        self.gradient_info[c][len(self.gradient_info[c])] = [[grad_share, grad_ts_h, grad_ts_d], self.gradient_info[c][len(self.gradient_info[c])-1][1]+1]
-                else:
-                    if len(self.gradient_info[c])==0:
-                        self.gradient_info[c][0] = [[], 0]
-                    else:
-                        self.gradient_info[c][len(self.gradient_info[c])] = [[], self.gradient_info[c][len(self.gradient_info[c])-1][1]]
-                        
-            self.gradient_norm[choice].append(
-                [torch.norm(torch.cat([grad_share, grad_ts_h, grad_ts_d])).cpu().data.item()])
-
-        if self.total_count >= self.opts.warm_start * \
-                int(self.trainer_params['train_episodes'] / self.trainer_params['train_batch_size']) \
-                and self.total_count % self.select_freq == 0 \
-                and self.total_count != 0:
-            # update ts using gradient information
+        if not self.stl:
             if self.rank == 0:
-                M_similarity, M_similarity_share, M_similarity_head, M_similarity_dec = self.get_influ_mat()
-                self.influ_mats_sim.append(M_similarity)
-                self.influ_mats_sim_share.append(M_similarity_share)
-                self.influ_mats_sim_header.append(M_similarity_head)
-                self.influ_mats_sim_dec.append(M_similarity_dec)
-                reward_for_each_task = 1 / (1 + np.exp(-M_similarity.sum(axis=0)))
-                grad_info_num = np.array([list(val.items())[-1][1][1] for _, val in self.gradient_info.items()])
-                reward_for_each_task[grad_info_num == 0] = 0
+                # recored the gradient information
+                grad_share = []
+                for name, params in self.model.module.encoder.named_parameters():
+                    grad_share.append(params.grad.data.view(-1))
+                grad_share = torch.cat(grad_share)
 
-                for task_idx in range(num_tasks):
-                    select_counts = self.gradient_info[task_idx][2]
-                    if select_counts != 0:
-                        self.bandit.getReward(task_idx, reward_for_each_task[task_idx])
+                grad_ts_h = []
+                for name, params in self.model.module.headers[problem_idx].named_parameters():
+                    grad_ts_h.append(params.grad.data.view(-1))
+                grad_ts_h = torch.cat(grad_ts_h)
+                grad_ts_d = []
+                for name, params in self.model.module.decoders[problem_idx].named_parameters():
+                    grad_ts_d.append(params.grad.data.view(-1))
+                grad_ts_d = torch.cat(grad_ts_d)
 
-                    if self.bandit_alg == 'Thompson' or self.bandit_alg == 'DiscountedThompson':
-                        self.bandit.rewards[task_idx] += reward_for_each_task[task_idx]
+                for c in range(num_tasks):
+                    if c == choice:
+                        if len(self.gradient_info[c])==0:
+                            self.gradient_info[c][0] = [[grad_share, grad_ts_h, grad_ts_d], 1]
+                        else:
+                            self.gradient_info[c][len(self.gradient_info[c])] = [[grad_share, grad_ts_h, grad_ts_d], self.gradient_info[c][len(self.gradient_info[c])-1][1]+1]
+                    else:
+                        if len(self.gradient_info[c])==0:
+                            self.gradient_info[c][0] = [[], 0]
+                        else:
+                            self.gradient_info[c][len(self.gradient_info[c])] = [[], self.gradient_info[c][len(self.gradient_info[c])-1][1]]
+                            
+                self.gradient_norm[choice].append(
+                    [torch.norm(torch.cat([grad_share, grad_ts_h, grad_ts_d])).cpu().data.item()])
 
-                self.rewards.append(reward_for_each_task)
-                temp_gradient_info = {i:{} for i in range(num_tasks)}
-                for i in range(num_tasks):
-                    for key, val in self.gradient_info[i].items():
-                        if len(val[0])!=0:
-                            temp_gradient_info[i][0] = [val[0], 1]
-                
-                self.gradient_info = temp_gradient_info
-        self.total_count += 1
+            if self.total_count >= self.opts.warm_start * \
+                    int(self.trainer_params['train_episodes'] / self.trainer_params['train_batch_size']) \
+                    and self.total_count % self.select_freq == 0 \
+                    and self.total_count != 0:
+                # update ts using gradient information
+                if self.rank == 0:
+                    M_similarity, M_similarity_share, M_similarity_head, M_similarity_dec = self.get_influ_mat()
+                    self.influ_mats_sim.append(M_similarity)
+                    self.influ_mats_sim_share.append(M_similarity_share)
+                    self.influ_mats_sim_header.append(M_similarity_head)
+                    self.influ_mats_sim_dec.append(M_similarity_dec)
+                    reward_for_each_task = 1 / (1 + np.exp(-M_similarity.sum(axis=0)))
+                    grad_info_num = np.array([list(val.items())[-1][1][1] for _, val in self.gradient_info.items()])
+                    reward_for_each_task[grad_info_num == 0] = 0
+
+                    for task_idx in range(num_tasks):
+                        select_counts = self.gradient_info[task_idx][2]
+                        if select_counts != 0:
+                            self.bandit.getReward(task_idx, reward_for_each_task[task_idx])
+
+                        if self.bandit_alg == 'Thompson' or self.bandit_alg == 'DiscountedThompson':
+                            self.bandit.rewards[task_idx] += reward_for_each_task[task_idx]
+
+                    self.rewards.append(reward_for_each_task)
+                    temp_gradient_info = {i:{} for i in range(num_tasks)}
+                    for i in range(num_tasks):
+                        for key, val in self.gradient_info[i].items():
+                            if len(val[0])!=0:
+                                temp_gradient_info[i][0] = [val[0], 1]
+                    
+                    self.gradient_info = temp_gradient_info
+            self.total_count += 1
 
         return loss_mean.data.item(), score_mean
 
