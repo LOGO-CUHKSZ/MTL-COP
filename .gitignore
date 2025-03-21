@@ -1,7 +1,10 @@
 __pycache__/
 SMPyBandits/
 result/
+result_mtl/
 datasets/
 playground*
 *.sh
+*.pkl
+run_test.py
 get_results_tab2.py

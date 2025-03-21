@@ -8,6 +8,8 @@ import os
 import argparse
 import numpy as np
 from tqdm import tqdm
+import re
+
 
 
 def main(opts):
@@ -78,42 +80,14 @@ def _print_config():
     [logger.info(g_key + "{}".format(globals()[g_key])) for g_key in globals().keys() if g_key.endswith('params')]
 
 
-def get_seen_task(path):
-    tasks = path.split('/')[-1].split('_train_')[1].split('_BanditAlg')[0].split('-')
-    cop = {}
-    for task in tasks:
-        try:
-            problem = task.split('[')[0]
-            scale =task.split('[')[1].split(']')[0].replace(' ','').split(',')
-            scale = list(map(int, scale))
-            cop[problem] = scale
-        except:
-            import re
-            scale = re.findall(r'[0-9]+|[a-z]+', task)
-            problem = task.split(scale[0])[0]
-            scale = list(map(int, scale))
-            cop[problem] = scale
-    return cop
-
-def get_unseen_task(path, seen_tasks=None):
-    try:
-    # if 'unseen' in path:
-        tasks = path.split('/')[-1].split('unseen-')[-1].split('_')[0].split('-')
-        cop = {}
-        for task in tasks:
-            problem = task.split('[')[0]
-            scale = task.split('[')[1].split(']')[0].replace(' ', '').split(',')
-            scale = list(map(int, scale))
-            cop[problem] = scale
-    except:
-    # else:
-        cop = {}
-        for problem in seen_tasks.keys():
-            if problem == 'TSP' or problem == 'CVRP' or problem == 'OP':
-                cop[problem] = list(set([20,50,100]) - set(seen_cop[problem]))
-            else:
-                cop[problem] = list(set([50,100,200]) - set(seen_cop[problem]))
-    return cop
+def get_tasks(path):
+    folder_name = path.split('/')[-1]
+    pattern = r'(TSP|CVRP|OP|KP)\[([^\]]+)\]'
+    matches = re.findall(pattern, folder_name)
+    scales = {}
+    for task_type, scale_str in matches:
+        scales[task_type] = [int(s.strip()) for s in scale_str.split(',')]
+    return scales
 
 
 if __name__ == "__main__":
@@ -138,19 +112,18 @@ if __name__ == "__main__":
     opts = parser.parse_args()
     opts.task_description = opts.model_path.split('desc-')[1]
 
-    seen_cop = get_seen_task(opts.model_path)
-    unseen_cop = get_unseen_task(opts.model_path, seen_cop)
-    all_problem = list(set(list(seen_cop.keys()) + list(unseen_cop.keys())))
+    seen_cop = get_tasks(opts.model_path)
+    all_problem = list(set(list(seen_cop.keys())))
     for problem in all_problem:
         if problem == 'TSP':
-            opts.tsp = np.sort(seen_cop[problem] + unseen_cop[problem]).tolist()
+            opts.tsp = np.sort(seen_cop[problem]).tolist()
 
         elif problem == 'CVRP':
-            opts.cvrp = np.sort(seen_cop[problem] + unseen_cop[problem]).tolist()
+            opts.cvrp = np.sort(seen_cop[problem]).tolist()
 
         elif problem == 'KP':
-            opts.kp = np.sort(seen_cop[problem] + unseen_cop[problem]).tolist()
+            opts.kp = np.sort(seen_cop[problem]).tolist()
         elif problem == 'OP':
-            opts.op = np.sort(seen_cop[problem] + unseen_cop[problem]).tolist()
+            opts.op = np.sort(seen_cop[problem]).tolist()
 
     main(opts)

@@ -13,7 +13,6 @@ from SMPyBandits.SMPyBandits.Policies.DiscountedThompson import DiscountedThomps
 
 import pickle
 import torch.distributed as dist
-from copy import deepcopy
 import time
 import itertools
 

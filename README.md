@@ -43,3 +43,6 @@ Test on TSPLib or CVRPLib:
 CUDA_VISIBLE_DEVICES=0 python test_real.py --tsp --model_path "your/model/path" --model_epoch 1000
 CUDA_VISIBLE_DEVICES=0 python test_real.py --cvrp --model_path "your/model/path" --model_epoch 1000
 ```
+
+## Acknowledgements
+This code repository is heavily based on the work from the POMO project, which can be found at https://github.com/yd-kwon/POMO. 
