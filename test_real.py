@@ -1,13 +1,10 @@
 import os
-import sys
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 import logging
 from utils import create_logger, copy_all_src
 from Tester_real import COPTester as Tester
 import os
 import argparse
-import numpy as np
-from tqdm import tqdm
 
 
 def main(opts):

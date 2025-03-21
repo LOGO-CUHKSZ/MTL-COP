@@ -1,8 +1,5 @@
 import torch
-import os
 from logging import getLogger
-from Env.TSPEnv import TSPEnv
-from Env.CVRPEnv import CVRPEnv
 from Env.COPEnv import COPEnv as Env
 from Models.models import COPModel as Model
 from utils import *

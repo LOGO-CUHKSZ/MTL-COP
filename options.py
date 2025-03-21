@@ -3,7 +3,6 @@ import argparse
 def get_options():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hfai_mode', action='store_true')
     parser.add_argument('--alg', default=None, help='naive, pcgrad, nashmtl, banditmtl, uw'
                                                                )
     parser.add_argument('--method_params_lr', type=float, default=0.025)
@@ -59,7 +58,7 @@ def get_options():
     # training params
     parser.add_argument('--epochs', type=int, default=1000)
     parser.add_argument('--train_episodes', type=int, default=100*1000)
-    parser.add_argument('--train_batch_size', type=int, default=512)
+    parser.add_argument('--train_batch_size', type=int, default=128)
     parser.add_argument('--patience', type=int, default=100)
     parser.add_argument('--factor', type=float, default=.5)
     parser.add_argument('--min_lr', type=float, default=1e-8)

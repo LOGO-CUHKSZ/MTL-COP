@@ -12,10 +12,8 @@ from Models.models import COPModel as Model
 from torch.optim import Adam as Optimizer
 from torch.optim.lr_scheduler import MultiStepLR as Scheduler
 from torch.nn.parallel import DistributedDataParallel as DDP
-# import ray
 from utils import *
 from weight_methods import WeightMethods
-import pickle
 import torch.distributed as dist
 from copy import deepcopy
 
@@ -215,12 +213,6 @@ class Trainer:
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             self.scheduler.last_epoch = checkpoint['epoch'] - 1
 
-            # self.weighted_method = checkpoint['weighted_method']
-            # self.weighted_collection = checkpoint['weighted_collection']
-            # load resume info for bandit algorithm
-            # with open('{}/bandit_info-{}.pkl'.format(model_load['path'],load_epoch), 'rb') as file:
-            #     self.bandit = pickle.load(file)
-
             self.eval_res = checkpoint['eval_res']
             self.overall_seen_data = checkpoint['overall_seen_data']
             self.overall_unseen_data = checkpoint['overall_unseen_data']
@@ -322,8 +314,6 @@ class Trainer:
                     'hist_best_model_params_unseen': self.hist_best_model_params_unseen,
                     'training_time': self.training_time,
                     'total_count': self.total_count,
-                    # 'weighted_method': self.weighted_method,
-                    # 'weighted_collection': self.weighted_collection
 
                 }
                 torch.save(checkpoint_dict, '{}/checkpoint-{}.pt'.format(self.result_folder, epoch))
@@ -344,21 +334,9 @@ class Trainer:
                     'hist_best_model_params_unseen': self.hist_best_model_params_unseen,
                     'training_time': self.training_time,
                     'total_count': self.total_count,
-                    # 'weighted_method': self.weighted_method,
-                    # 'weighted_collection': self.weighted_collection
 
                 }
                 torch.save(checkpoint_dict, '{}/checkpoint-latest.pt'.format(self.result_folder))
-                # with open('{}/bandit_info-latest.pkl'.format(self.result_folder), 'wb') as file:
-                #     pickle.dump(self.bandit, file)
-
-            # # Save Image
-            # if all_done or (epoch % img_save_interval) == 0:
-            #     image_prefix = '{}/img/checkpoint-{}'.format(self.result_folder, epoch)
-            #     util_save_log_image_with_label(image_prefix, self.trainer_params['logging']['log_image_params_1'],
-            #                         self.result_log, labels=['train_score'])
-            #     util_save_log_image_with_label(image_prefix, self.trainer_params['logging']['log_image_params_2'],
-            #                         self.result_log, labels=['train_loss'])
 
             # All-done announcement
             if all_done:
@@ -402,113 +380,6 @@ class Trainer:
         ###############################################
         self.model.train()
         num_tasks = (sum([len(cop_env) for cop_env in self.env_list]))
-
-
-        # for cop_env in self.env_list:
-        #     for env in cop_env:
-        #         env.load_problems(batch_size=batch_size)
-        # # [env.load_problems(batch_size) for env in cop_env for cop_env in self.env_list]
-        # # if self.env_params['same']:
-        # #     if 'TSP' in self.problem:
-        # #         share_coord = [env.problems for env in self.env_list[self.problem.index('TSP')]]
-        # #     elif 'KP' in self.problem:
-        # #         share_coord = [env.problems for env in self.env_list[self.problem.index('KP')]]
-        # #     else:
-        # #         share_coord = None
-        # #
-        # #     if share_coord is None:
-        # #         if 'CVRP' in self.problem:
-        # #             # share_coord = self.env_list[self.problem.index('CVRP')].depot_node_xy[:,1:,:]
-        # #             share_coord = [env.depot_node_xy[:,1:,:] for env in self.env_list[self.problem.index('CVRP')]]
-        # #
-        # #         elif 'OP' in self.problem:
-        # #             # share_coord = self.env_list[self.problem.index('OP')].depot_node_xy[:,1:,:]
-        # #             share_coord = [env.depot_node_xy[:,1:,:] for env in self.env_list[self.problem.index('OP')]]
-        # #
-        # #     else:
-        # #         if 'CVRP' in self.problem:
-        # #             # self.env_list[self.problem.index('CVRP')].depot_node_xy[:, 1:, :] = share_coord
-        # #             for i, env in enumerate(self.env_list[self.problem.index('CVRP')]):
-        # #                 env.depot_node_xy[:, 1:, :] = share_coord[i]
-        # #         elif 'OP' in self.problem:
-        # #             # self.env_list[self.problem.index('OP')].depot_node_xy[:, 1:, :] = share_coord
-        # #             for i, env in enumerate(self.env_list[self.problem.index('OP')]):
-        # #                 env.depot_node_xy[:, 1:, :] = share_coord[i]
-        # #     if 'TSP' in self.problem:
-        # #         # self.env_list[self.problem.index('TSP')].problems = share_coord
-        # #         for i, env in enumerate(self.env_list[self.problem.index('TSP')]):
-        # #             env.problems = share_coord[i]
-        # #     if 'KP' in self.problem:
-        # #         # self.env_list[self.problem.index('KP')].problems = share_coord
-        # #         for i, env in enumerate(self.env_list[self.problem.index('KP')]):
-        # #             env.problems = share_coord[i]
-        #
-        # # reset_state, _, _ = zip(*[env.reset() for env in self.env_list])
-        # # reset_state = []
-        # # states, rewards, dones = [], [], []
-        # # for cop_env in self.env_list:
-        # #     temp_reset_state = []
-        # #     temp_state = []
-        # #     temp_reward = []
-        # #     temp_dones = []
-        # #     for env in cop_env:
-        # #         reset_s, _, _ = env.reset()
-        # #         state, reward, done = env.pre_step()
-        # #         temp_reset_state.append(reset_s)
-        # #         temp_state.append(state)
-        # #         temp_reward.append(reward)
-        # #         temp_dones.append(done)
-        # #
-        # #     reset_state.append(temp_reset_state)
-        # #     states.append(temp_state)
-        # #     rewards.append(temp_reward)
-        # #     dones.append(temp_dones)
-        #
-        # # POMO Rollout
-        # ###############################################
-        # # if not self.separte_train:
-        # #     self.model.module.pre_forward(reset_state)
-        #
-        # # states, rewards, dones = zip(*[env.pre_step() for env in self.env_list])
-        # loss_mean_list = []
-        # score_mean_list = []
-        #
-        # total_loss = None
-        # self.model.zero_grad()
-        # for _ in range(len(self.env_list)):
-        #     cop_env = self.env_list[_]
-        #     problem = self.problem[_]
-        #     temp_mean_score = []
-        #     for i in range(len(cop_env)):
-        #         env = cop_env[i]
-        #         state, reward, done = states[_][i], rewards[_][i], dones[_][i]
-        #         # if self.separte_train:
-        #         self.model.module.pre_forward_oneCOP(reset_state[_][i], problem)
-        #         loss_mean, score_mean = self.train_one_COP(env, problem, state, reward, done)
-        #         # loss_mean.backward()
-        #
-        #         if total_loss is None:
-        #             total_loss = loss_mean
-        #         else:
-        #             total_loss += loss_mean
-        #
-        #         loss_mean_list.append(loss_mean.data.item())
-        #         temp_mean_score.append(score_mean)
-        #         # if self.separte_train:
-        #         #     self.model.zero_grad()
-        #         #     loss_mean.backward()
-        #         #     self.optimizer.step()
-        #     score_mean_list.append(np.array(temp_mean_score))
-        # score_mean_list = np.concatenate(score_mean_list)
-        # # total_loss = total_loss / len(loss_mean_list)
-        # total_loss = np.mean(loss_mean_list)
-        # total_score = np.mean(score_mean_list).item()
-        # # if not self.separte_train:
-        #     # self.model.zero_grad()
-        #     # total_loss.backward()
-        #     # self.optimizer.step()
-        # self.optimizer.step()
-
 
         loss_mean_all = None
         score_mean_all = None

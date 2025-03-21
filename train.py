@@ -81,28 +81,6 @@ if __name__ == "__main__":
     model_params['sqrt_embedding_dim'] = model_params['embedding_dim']**(.5)
 
     opts = get_options()
-    # CUDA_VISIBLE_DEVICES=6,7 python train.py --alg banditmtl --tsp 20 50 --cvrp 20 50 --op 20 50 --kp 50 100 --epochs 100 --task_description test_small --model_save_interval 10
-
-    # opts.hfai_mode = True
-    # opts.alg = 'nashmtl'
-    # opts.tsp = [20,50]
-    # opts.cvrp = [20,50]
-    # opts.op = [20]
-    # opts.kp = [50]
-    #
-    # opts.unseen_tsp = [21]
-    # opts.unseen_cvrp = [21]
-    # opts.unseen_op = [21]
-    # opts.unseen_kp = [51]
-    #
-
-    # opts.train_episodes=1000
-    # opts.train_batch_size = 128
-    # opts.task_description = 'test-valid-nogap-debug---'
-
-    # if opts.select_freq is None:
-    #     opts.select_freq = opts.train_episodes//opts.train_batch_size if opts.train_episodes%opts.train_batch_size==0 else opts.train_episodes//opts.train_batch_size + 1
-
 
     # setting for seen tasks
     if opts.tsp is not None:
@@ -177,23 +155,6 @@ if __name__ == "__main__":
     logger_params['log_file']['desc'] =  \
         'train_{}_alg-{}_desc-{}'.format('-'.join(str(_)+str(env_params[_]['problem_size']) for _ in problem_list), opts.alg,
                                                          opts.task_description)
-
-    if opts.hfai_mode:
-        # os.environ['CUDA_VISIBLE_DEVICES'] = '6,7'#'0,1,2,3,4,5,6,7'
-        resume_path = './result/_train_{}_alg-{}_desc-{}'.format('-'.join(str(_)+str(env_params[_]['problem_size']) for _ in problem_list),opts.alg,
-                                                                                   opts.task_description)
-        try:
-            if 'checkpoint-latest.pt' in os.listdir(resume_path):
-                trainer_params['model_load'] = {
-                    'enable': True,  # enable loading pre-trained model
-                    'path': resume_path,  # directory path of pre-trained model and log files saved.
-                    'epoch': 'latest',  # epoch version of pre-trained model to laod.
-                }
-                print('Resume Training!')
-        except:
-            pass
-
-        logger_params['log_file']['filepath'] = './result/' + '{desc}'
 
     n_gpus = torch.cuda.device_count()
     world_size = n_gpus

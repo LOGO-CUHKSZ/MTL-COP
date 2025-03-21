@@ -80,7 +80,13 @@ class OPEnv:
             depot, loc, prize, max_length = get_random_op_problems(batch_size, self.problem_size,self.prize_type)
         else:
             self.batch_size = prepare_dataset.shape[0]
-            depot, loc, prize = prepare_dataset[:,0:1,:2], prepare_dataset[:,1:,:2], prepare_dataset[:,:,-1]
+            if prepare_dataset.shape[-1] == 3:
+                depot, loc, prize = prepare_dataset[:,0:1,:2], prepare_dataset[:,1:,:2], prepare_dataset[:,:,-1]
+            else:
+                depot, loc = prepare_dataset[:,0:1,:2], prepare_dataset[:,1:,:2]
+                prize_ = ((depot - prepare_dataset[:,:,:2])**2).sum(-1).sqrt()
+                prize = 1 + (prize_ / prize_.max(dim=-1, keepdims=True)[0] * 99).to(torch.int32)
+                prize = prize/ 100
             max_length = self.get_length(self.problem_size) * torch.ones(size=(self.batch_size,1))
 
         # problems.shape: (batch, problem, 2)
@@ -249,8 +255,3 @@ if __name__=="__main__":
             state, rew, done = env.step(selected)
             mask = state.ninf_mask
             i+=1
-
-
-
-
-

@@ -29,7 +29,7 @@ banditmtl
 
 ## Training
 ```python
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python train.py --alg $mtl_method --tsp 20 50 100  --cvrp 20 50 100  --op 20 50 100  --kp 50 100 200 --epochs 1000 --task_description mtl_baseline --model_save_interval 5
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python train.py --alg $mtl_method --tsp 20 50 100  --cvrp 20 50 100  --op 20 50 100  --kp 50 100 200 --epochs 100 --task_description mtl_baseline --model_save_interval 5
 ```
 
 
@@ -43,3 +43,6 @@ Test on TSPLib or CVRPLib:
 CUDA_VISIBLE_DEVICES=0 python test_real.py --tsp --model_path "your/model/path" --model_epoch 1000
 CUDA_VISIBLE_DEVICES=0 python test_real.py --cvrp --model_path "your/model/path" --model_epoch 1000
 ```
+
+## Acknowledge
+This code is based on the POMO repository: [POMO](https://github.com/yd-kwon/POMO)
